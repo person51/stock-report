@@ -1,0 +1,10 @@
+# Python 編譯快取
+__pycache__/
+*.pyc
+
+# 自動產生的每日大盤報告 HTML 檔
+report_*.html
+
+# Google Drive API 敏感金鑰與憑證檔（切勿提交以免洩漏）
+client_secrets.json
+token.json
