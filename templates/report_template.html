@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>台股每日大盤分析報告</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0b0f19 0%, #111827 50%, #1e1b4b 100%);
+            --card-bg: rgba(17, 24, 39, 0.5);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --card-border-hover: rgba(99, 102, 241, 0.4);
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            
+            /* Up/Down colors */
+            --up-gradient: linear-gradient(135deg, #f97316 0%, #ef4444 100%);
+            --up-color: #f87171;
+            --down-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            --down-color: #34d399;
+            --neutral-color: #9ca3af;
+            --neutral-gradient: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', 'Noto Sans TC', sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+            padding: 2rem 1rem;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Ambient background glow */
+        body::before {
+            content: '';
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(0,0,0,0) 70%);
+            top: -100px;
+            right: -100px;
+            z-index: -1;
+        }
+        body::after {
+            content: '';
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(236, 72, 153, 0.08) 0%, rgba(0,0,0,0) 70%);
+            bottom: -100px;
+            left: -150px;
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .header-title h1 {
+            font-size: 2.2rem;
+            font-weight: 900;
+            background: linear-gradient(to right, #ffffff, #a5b4fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .header-title p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-top: 0.25rem;
+        }
+
+        .header-meta {
+            text-align: right;
+        }
+
+        .timestamp {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.5rem 1rem;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+            display: inline-block;
+        }
+
+        /* Glassmorphism Card Style */
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: 18px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.25);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0) 100%);
+            pointer-events: none;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-6px);
+            border-color: var(--card-border-hover);
+            box-shadow: 0 15px 35px 0 rgba(99, 102, 241, 0.15);
+        }
+
+        /* Layout Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 900px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            .header-meta {
+                text-align: left;
+            }
+        }
+
+        /* Market Focus Card */
+        .market-card {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .market-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+        }
+
+        .market-title-badge {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-muted);
+            font-weight: 700;
+        }
+
+        .market-index-container {
+            display: flex;
+            align-items: baseline;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .market-index {
+            font-size: 2.8rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+        }
+
+        .price-up {
+            color: var(--up-color);
+        }
+
+        .price-down {
+            color: var(--down-color);
+        }
+
+        .price-neutral {
+            color: var(--neutral-color);
+        }
+
+        .badge-up {
+            background: var(--up-gradient);
+            color: white;
+        }
+
+        .badge-down {
+            background: var(--down-gradient);
+            color: white;
+        }
+
+        .badge-neutral {
+            background: var(--neutral-gradient);
+            color: white;
+        }
+
+        .market-change-badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Market Details (Grid inside card) */
+        .market-details {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        @media (max-width: 600px) {
+            .market-details {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .detail-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+            font-weight: 500;
+        }
+
+        .detail-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        /* AI Insights Card */
+        .ai-card {
+            border-left: 4px solid #6366f1;
+        }
+
+        .ai-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            color: #a5b4fc;
+        }
+
+        .ai-icon {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        .ai-content {
+            font-size: 0.95rem;
+            line-height: 1.7;
+            color: var(--text-secondary);
+        }
+
+        /* Chart Section */
+        .chart-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-title::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 16px;
+            background: var(--up-color);
+            border-radius: 2px;
+        }
+
+        .chart-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(10, 15, 30, 0.6);
+            border: 1px solid var(--card-border);
+            border-radius: 18px;
+            padding: 1.5rem;
+            overflow: hidden;
+        }
+
+        .chart-img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            display: block;
+        }
+
+        /* Stocks Grid */
+        .stocks-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .stocks-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .stock-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .stock-name-code {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stock-name {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .stock-code {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .stock-price-info {
+            text-align: right;
+        }
+
+        .stock-price {
+            font-size: 1.4rem;
+            font-weight: 800;
+        }
+
+        .stock-change {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-top: 0.1rem;
+        }
+
+        .stock-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* News Section */
+        .news-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .news-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .news-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.25rem;
+            background: rgba(17, 24, 39, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .news-item:hover {
+            background: rgba(99, 102, 241, 0.08);
+            border-color: rgba(99, 102, 241, 0.3);
+            transform: translateX(4px);
+        }
+
+        .news-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            flex: 1;
+            padding-right: 1.5rem;
+        }
+
+        .news-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text-primary);
+        }
+
+        .news-source {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .news-arrow {
+            color: var(--text-muted);
+            transition: transform 0.3s ease;
+        }
+
+        .news-item:hover .news-arrow {
+            color: #a5b4fc;
+            transform: translateX(2px);
+        }
+
+        footer {
+            margin-top: 3rem;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            padding: 1.5rem 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="header-title">
+                <h1>台股每日大盤分析報告</h1>
+                <p>自動生成的當日台股市場重點數據與 AI 分析</p>
+            </div>
+            <div class="header-meta">
+                <span class="timestamp">報告生成時間：{{ generated_time }}</span>
+            </div>
+        </header>
+
+        <!-- Dashboard Grid (Market + AI) -->
+        <div class="dashboard-grid">
+            <!-- Market Focus Card -->
+            <div class="glass-card market-card">
+                <div>
+                    <div class="market-header">
+                        <div class="market-name-section">
+                            <div class="market-title-badge">Market Index</div>
+                            <div class="market-index-container">
+                                <span class="market-index {% if market.change > 0 %}price-up{% elif market.change < 0 %}price-down{% else %}price-neutral{% endif %}">
+                                    {{ "{:,.2f}".format(market.index) }}
+                                </span>
+                                <span class="market-change-badge {% if market.change > 0 %}badge-up{% elif market.change < 0 %}badge-down{% else %}badge-neutral{% endif %}">
+                                    {% if market.change > 0 %}▲{% elif market.change < 0 %}▼{% endif %}
+                                    {{ "{:,.2f}".format(market.change) }} ({{ "{:+.2f}".format(market.change_percent) }}%)
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="market-details">
+                    <div class="detail-item">
+                        <span class="detail-label">開盤價</span>
+                        <span class="detail-value">{{ "{:,.2f}".format(market.open) }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">最高價</span>
+                        <span class="detail-value {% if market.high > market.open %}price-up{% endif %}">{{ "{:,.2f}".format(market.high) }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">最低價</span>
+                        <span class="detail-value {% if market.low < market.open %}price-down{% endif %}">{{ "{:,.2f}".format(market.low) }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">成交量</span>
+                        <span class="detail-value">{{ market.volume }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Insight Card -->
+            <div class="glass-card ai-card">
+                <div class="ai-title">
+                    <!-- Brain Icon SVG -->
+                    <svg class="ai-icon" viewBox="0 0 24 24">
+                        <path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 19.4c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0l1.9-1.9C9.07 19.58 10.47 20 12 20c4.97 0 9-4.03 9-9s-4.03-9-9-9zm0 15c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/>
+                        <path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zm0 8c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/>
+                    </svg>
+                    <span>AI 盤勢簡評</span>
+                </div>
+                <div class="ai-content">
+                    {% if market.change_percent >= 1.0 %}
+                        今日大盤展現極為強勁的噴出行情，買盤氣勢如虹，指數跳空大漲。各主要權值股領軍上攻，多頭格局明確，市場氛圍極度樂觀。
+                    {% elif market.change_percent > 0.3 %}
+                        今日大盤表現強勢，多方掌控局勢，權值股穩健撐盤。指數在買單追捧下穩健走高，短期均線維持多頭排列，盤勢發展偏向樂觀。
+                    {% elif market.change_percent >= -0.3 and market.change_percent <= 0.3 %}
+                        今日大盤呈現窄幅區間震盪整理，市場多空拉鋸，觀望氣氛較為濃厚。權值股表現分歧，缺乏主流類股引導，大盤處於短線盤整態勢。
+                    {% elif market.change_percent < -1.0 %}
+                        今日大盤遭遇重挫，市場出現恐慌性賣壓，指數急瀉。各主要板塊全面走低，多頭防線失守，短期走勢偏空，投資人需密切留意下檔支撐並嚴格控制風險。
+                    {% else %}
+                        今日大盤走勢疲弱，空方佔據優勢，買盤力道薄弱。指數開高走低或震盪走跌，短線面臨修正壓力，操作上建議保守應對，留意均線支撐。
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Matplotlib Chart Section -->
+        <div class="chart-section">
+            <h2 class="section-title">大盤當日走勢圖</h2>
+            <div class="chart-container">
+                <img class="chart-img" src="{{ chart_base64 }}" alt="大盤走勢圖">
+            </div>
+        </div>
+
+        <!-- Stocks Grid (TSMC, Foxconn, MediaTek) -->
+        <h2 class="section-title">焦點個股行情</h2>
+        <div class="stocks-grid">
+            {% for name, info in stocks.items() %}
+            <div class="glass-card">
+                <div class="stock-card-header">
+                    <div class="stock-name-code">
+                        <span class="stock-name">{{ name }}</span>
+                        <span class="stock-code">
+                            {% if name == "台積電" %}2330.TW
+                            {% elif name == "鴻海" %}2317.TW
+                            {% elif name == "聯發科" %}2454.TW
+                            {% else %}STK{% endif %}
+                        </span>
+                    </div>
+                    <div class="stock-price-info">
+                        <div class="stock-price {% if info.change > 0 %}price-up{% elif info.change < 0 %}price-down{% else %}price-neutral{% endif %}">
+                            {{ "{:,.2f}".format(info.price) }}
+                        </div>
+                        <div class="stock-change {% if info.change > 0 %}price-up{% elif info.change < 0 %}price-down{% else %}price-neutral{% endif %}">
+                            {{ "{:+.2f}".format(info.change) }} ({{ "{:+.2f}".format(info.change_percent) }}%)
+                        </div>
+                    </div>
+                </div>
+                <div class="stock-details">
+                    <div class="detail-item">
+                        <span class="detail-label">開盤價</span>
+                        <span class="detail-value">{{ "{:,.2f}".format(info.open) }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">最高價</span>
+                        <span class="detail-value">{{ "{:,.2f}".format(info.high) }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">最低價</span>
+                        <span class="detail-value">{{ "{:,.2f}".format(info.low) }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">成交量</span>
+                        <span class="detail-value">{{ info.volume }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- News Section -->
+        <div class="news-section">
+            <h2 class="section-title">焦點財經新聞</h2>
+            <div class="news-list">
+                {% for item in news %}
+                <a href="{{ item.url }}" class="news-item" target="_blank">
+                    <div class="news-content">
+                        <span class="news-title">{{ item.title }}</span>
+                        <span class="news-source">{{ item.source }}</span>
+                    </div>
+                    <div class="news-arrow">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer>
+            <p>© 2026 台股每日分析報告系統. 本報告僅供參考，不構成任何投資建議。</p>
+        </footer>
+    </div>
+</body>
+</html>
